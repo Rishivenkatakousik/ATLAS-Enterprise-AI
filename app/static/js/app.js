@@ -33,7 +33,10 @@ const fmtDate = d => { const x = new Date(d); return isNaN(x) ? '' : x.toLocaleS
 const ext = name => (String(name).split('.').pop() || '').slice(0, 4).toUpperCase();
 
 /* ---------- state ---------- */
-let conversationId = sessionStorage.getItem('atlas_conversation_id') || crypto.randomUUID();
+// crypto.randomUUID only exists in secure contexts (HTTPS/localhost); fall back for plain-HTTP deployments.
+const uuid = () => (globalThis.crypto && typeof crypto.randomUUID === 'function') ? crypto.randomUUID()
+  : '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
+let conversationId = sessionStorage.getItem('atlas_conversation_id') || uuid();
 sessionStorage.setItem('atlas_conversation_id', conversationId);
 let conversations = [];
 let transcript = [];           // {role, content, sources?}
@@ -153,7 +156,7 @@ function resetEvidence(sub = 'Retrieved passages appear here') {
   $('sources').replaceChildren();
 }
 function newChat() {
-  conversationId = crypto.randomUUID(); sessionStorage.setItem('atlas_conversation_id', conversationId);
+  conversationId = uuid(); sessionStorage.setItem('atlas_conversation_id', conversationId);
   transcript = []; answerSources.clear(); answerTraces.clear(); closePanel();
   $('thread').replaceChildren(); resetEvidence(); setEmpty(true); renderHistory();
   view('ask');
@@ -456,7 +459,7 @@ async function uploadFile(f) {
   if (!f) return;
   if (!/\.(pdf|docx|txt|md)$/i.test(f.name)) { toast('Use a PDF, DOCX, TXT or MD file'); return; }
   if (f.size > 10485760) { toast('That file is over 10 MB'); return; }
-  const localId = crypto.randomUUID();
+  const localId = uuid();
   const entry = {title: f.name, status: 'uploading', created_at: null};
   localUploads.set(localId, entry);
   const setStatus = s => { entry.status = s; renderDocs(); };
