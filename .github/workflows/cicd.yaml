@@ -111,6 +111,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Login to Amazon ECR
+        id: login-ecr-deploy
         uses: aws-actions/amazon-ecr-login@v2
 
       # ----------------------------------------
@@ -120,17 +121,14 @@ jobs:
       - name: Construct ECR Image URI
         id: image
         env:
-          AWS_REGION: ${{ secrets.AWS_REGION }}
+          REGISTRY: ${{ steps.login-ecr-deploy.outputs.registry }}
           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_NAME }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
           set -euo pipefail
 
-          ACCOUNT_ID=$(aws sts get-caller-identity \
-            --query Account \
-            --output text)
-
-          REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+          test -n "$REGISTRY"
+          test -n "$ECR_REPOSITORY"
 
           IMAGE="${REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
 
